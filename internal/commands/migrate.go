@@ -20,40 +20,40 @@ type Scheme struct {
 var scheme = []Scheme{
 	{
 		Index:       1,
+		Description: "CREATE TYPE \"user_role\" AS ENUM",
+		Query: `
+        CREATE TYPE "user_role" AS ENUM ('EMPLOYEE', 'STUDENT');`,
+	}, {
+		Index:       2,
 		Description: "Create table: users.",
 		Query: `
-				CREATE TABLE IF NOT EXISTS users (
+        CREATE TABLE IF NOT EXISTS users (
                                      id serial primary key,
                                      username text not null,
                                      password text not null,
+                                     role user_role,
                                      full_name text,
+                                     birth_date date,
                                      avatar text,
-                                     role text not null,
-                                     phone text,
-									 birth_district int references districts(id),
-									 birth_date date,
-									 created_at timestamp default now(),
-                   					 created_by int references users(id),
-                   					 updated_at timestamp,
-                   					 updated_by int references users(id),
-                   					 deleted_at timestamp,
-                   					 deleted_by int references users(id)
-				);
-			`,
-	},
-	{
-		Index:       2,
-		Description: "Create area with username:admin, password: 1",
+                            		 created_at timestamp default now(),
+                              		 created_by int references users(id),
+                              		 updated_at timestamp,
+                              		 updated_by int references users(id),
+                              		 deleted_at timestamp,
+                              		 deleted_by int references users(id)
+        );`,
+	}, {
+		Index:       3,
+		Description: "Create area with username:Admin, password: 1",
 		Query: `
 				INSERT INTO users(username, role, password)
 				SElECT 'Admin','EMPLOYEE', '$2a$10$NKtnMwDPFSQLG6uOi4Zqheru5Ygbj9TWFHjpl478rRSaO5cJ9QuH2' WHERE NOT EXISTS (SELECT username FROM users WHERE username = 'Admin');
 			`,
-	},
-	{
-		Index:       3,
+	}, {
+		Index:       4,
 		Description: "Create table: republic.",
 		Query: `
-				CREATE TABLE IF NOT EXISTS republics (
+				CREATE TABLE IF NOT EXISTS republic (
                                            id serial primary key,
                                            name jsonb not null,
                                            created_at timestamp default now(),
@@ -62,49 +62,51 @@ var scheme = []Scheme{
                                            updated_by int references users(id),
                                            deleted_at timestamp,
                                            deleted_by int references users(id)
-			 );
-			`,
-	},
-	{
-		Index:       4,
-		Description: "Create table: departments",
-		Query: `
-		       CREATE TABLE IF NOT EXISTS  departments (
-				                          id serial primary key,
-										  name jsonb not null,
-										  created_at timestamp default now(),
-										  created_by int references users(id),
-										  updated_at timestamp,
-										  updated_by int references users(id),
-										  deleted_at timestamp,
-										  deleted_by int references users(id)
-			   )
-		`,
-	},
-	{
+			 );`,
+	}, {
 		Index:       5,
-		Description: "Create table: position",
-		Query: `
-		       CREATE TABLE IF NOT EXISTS  positions (
-				                          id serial primary key,
-										  name jsonb not null,
-										  created_at timestamp default now(),
-										  created_by int references users(id),
-										  updated_at timestamp,
-										  updated_by int references users(id),
-										  deleted_at timestamp,
-										  deleted_by int references users(id)
-			   )
-		`,
-	},
-	{
-		Index:       6,
 		Description: "Create table: region.",
 		Query: `
-				CREATE TABLE IF NOT EXISTS regions (
+				CREATE TABLE IF NOT EXISTS region (
                                            id serial primary key,
                                            name jsonb not null,
-                                           republic_id int references republics(id),
+                                           republic_id int references republic(id),
+                                           created_at timestamp default now(),
+                                           created_by int references users(id),
+                                           updated_at timestamp,
+                                           updated_by int references users(id),
+                                           deleted_at timestamp,
+                                           deleted_by int references users(id)
+			 );`,
+	}, {
+		Index:       6,
+		Description: "Create table: district.",
+		Query: `
+				CREATE TABLE IF NOT EXISTS district (
+                                           id serial primary key,
+                                           name jsonb not null,
+                                           region_id int references region(id),
+                                           created_at timestamp default now(),
+                                           created_by int references users(id),
+                                           updated_at timestamp,
+                                           updated_by int references users(id),
+                                           deleted_at timestamp,
+                                           deleted_by int references users(id)
+			 );`,
+	}, {
+		Index:       7,
+		Description: "Alter table: users adding columns",
+		Query: `
+				ALTER TABLE users
+				    ADD COLUMN IF NOT EXISTS birth_district_id int references district(id);
+			`,
+	}, {
+		Index:       8,
+		Description: "Create table: position.",
+		Query: `
+				CREATE TABLE IF NOT EXISTS position (
+                                           id serial primary key,
+                                           name jsonb not null,
                                            created_at timestamp default now(),
                                            created_by int references users(id),
                                            updated_at timestamp,
@@ -113,22 +115,20 @@ var scheme = []Scheme{
                                            deleted_by int references users(id)
 			 );
 			`,
-	},
-	{
-		Index:       7,
-		Description: "Create table: district.",
+	}, {
+		Index:       9,
+		Description: "Create table: department",
 		Query: `
-				CREATE TABLE IF NOT EXISTS districts (
+				CREATE TABLE IF NOT EXISTS department (
                                            id serial primary key,
                                            name jsonb not null,
-                                           region_id int references regions(id),
                                            created_at timestamp default now(),
-\										   created_by int references users(id),
+                                           created_by int references users(id),
                                            updated_at timestamp,
                                            updated_by int references users(id),
                                            deleted_at timestamp,
                                            deleted_by int references users(id)
-			 );
+				);
 			`,
 	},
 }

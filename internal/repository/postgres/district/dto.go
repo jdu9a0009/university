@@ -40,7 +40,7 @@ type CreateRequest struct {
 }
 
 type CreateResponse struct {
-	bun.BaseModel `bun:"table:districts"`
+	bun.BaseModel `bun:"table:district"`
 
 	ID int `json:"id" bun:"-"`
 

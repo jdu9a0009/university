@@ -61,7 +61,7 @@ func (r Repository) GetList(ctx context.Context, filter Filter) ([]GetListRespon
 				id,
 				name->>'%s'
 			FROM
-			    republics
+			    republic
 				WHERE deleted_at IS NULL
 			%s %s %s
 		`, lang, orderQuery, limitQuery, offsetQuery)
@@ -75,24 +75,6 @@ func (r Repository) GetList(ctx context.Context, filter Filter) ([]GetListRespon
 	}
 
 	var list []GetListResponse
-
-	// for rows.Next() {
-	// 	var detail GetListResponse
-	// 	var nameByte []byte
-	// 	if err = rows.Scan(&detail.ID, &nameByte); err != nil {
-	// 		return nil, 0, web.NewRequestError(errors.Wrap(err, "scanning republic"), http.StatusBadRequest)
-	// 	}
-
-	// 	if nameByte != nil {
-	// 		name := make(map[string]string)
-	// 		if err = json.Unmarshal(nameByte, &name); err != nil {
-	// 			return nil, 0, web.NewRequestError(errors.Wrap(err, "republic name unmarshal"), http.StatusBadRequest)
-	// 		}
-	// 		detail.Name = name
-	// 	}
-
-	// 	list = append(list, detail)
-	// }
 
 	for rows.Next() {
 		var detail GetListResponse
@@ -108,7 +90,7 @@ func (r Repository) GetList(ctx context.Context, filter Filter) ([]GetListRespon
 			SELECT
 				count(id)
 			FROM
-			 republics
+			 republic
 			 WHERE deleted_at IS NULL
 
 		`)
@@ -118,7 +100,7 @@ func (r Repository) GetList(ctx context.Context, filter Filter) ([]GetListRespon
 		return nil, 0, web.NewRequestError(postgres.ErrNotFound, http.StatusNotFound)
 	}
 	if err != nil {
-		return nil, 0, web.NewRequestError(errors.Wrap(err, "selecting republics"), http.StatusBadRequest)
+		return nil, 0, web.NewRequestError(errors.Wrap(err, "selecting republic"), http.StatusBadRequest)
 	}
 
 	count := 0
@@ -143,7 +125,7 @@ func (r Repository) GetDetailById(ctx context.Context, id int) (GetDetailByIdRes
 			id,
 			name
 		FROM
-		 republics
+		 republic
 		WHERE deleted_at IS NULL AND id = %d
 	`, id)
 
@@ -205,7 +187,7 @@ func (r Repository) UpdateAll(ctx context.Context, request UpdateRequest) error 
 		return err
 	}
 
-	q := r.NewUpdate().Table("republics").Where("deleted_at IS NULL AND id = ?", request.ID)
+	q := r.NewUpdate().Table("republic").Where("deleted_at IS NULL AND id = ?", request.ID)
 
 	q.Set("name = ?", request.Name)
 	q.Set("updated_at = ?", time.Now())
@@ -229,7 +211,7 @@ func (r Repository) UpdateColumns(ctx context.Context, request UpdateRequest) er
 		return err
 	}
 
-	q := r.NewUpdate().Table("republics").Where("deleted_at IS NULL AND id = ?", request.ID)
+	q := r.NewUpdate().Table("republic").Where("deleted_at IS NULL AND id = ?", request.ID)
 
 	if request.Name != nil {
 		q.Set("name = ?", request.Name)
@@ -246,5 +228,5 @@ func (r Repository) UpdateColumns(ctx context.Context, request UpdateRequest) er
 }
 
 func (r Repository) Delete(ctx context.Context, id int) error {
-	return r.DeleteRow(ctx, "republics", id)
+	return r.DeleteRow(ctx, "republic", id)
 }

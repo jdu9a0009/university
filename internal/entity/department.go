@@ -5,7 +5,7 @@ import(
 )
 
 type Department struct {
-	bun.BaseModel `bun:"table:departments"`
+	bun.BaseModel `bun:"table:department"`
 	
 	BasicEntity
 	Name map[string]string `json:"name"     bun:"name"`

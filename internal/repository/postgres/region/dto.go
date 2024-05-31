@@ -1,8 +1,9 @@
 package region
 
 import (
-	"github.com/uptrace/bun"
 	"time"
+
+	"github.com/uptrace/bun"
 )
 
 type Filter struct {
@@ -17,14 +18,14 @@ type GetListResponse struct {
 	ID                int      `json:"id"`
 	Name              *string  `json:"name"`
 	RepublicID        *int     `json:"republic_id" bun:"republic_id"`
-	RepublicName          *string  `json:"republic_name" bun:"republic_name"`
+	RepublicName      *string  `json:"republic_name" bun:"republic_name"`
 	NameLanguages     []string `json:"name_languages"`
 	RepublicLanguages []string `json:"republic_languages"`
 }
 
 type GetListByRepublicIDResponse struct {
-	ID     int     `json:"id"`
-	Name   *string `json:"name"`
+	ID   int     `json:"id"`
+	Name *string `json:"name"`
 }
 
 type GetDetailByIdResponse struct {
@@ -40,7 +41,7 @@ type CreateRequest struct {
 }
 
 type CreateResponse struct {
-	bun.BaseModel `bun:"table:regions"`
+	bun.BaseModel `bun:"table:region"`
 
 	ID int `json:"id" bun:"-"`
 

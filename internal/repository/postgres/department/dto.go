@@ -28,7 +28,7 @@ type CreateRequest struct {
 }
 
 type CreateResponse struct {
-	bun.BaseModel `bun:"table:departments"`
+	bun.BaseModel `bun:"table:department"`
 
 	ID        int               `json:"id" bun:"-"`
 	Name      map[string]string `json:"name"       bun:"name"`

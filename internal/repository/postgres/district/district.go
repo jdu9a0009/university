@@ -80,8 +80,8 @@ func (r Repository) GetList(ctx context.Context, filter Filter) ([]GetListRespon
 			d.region_id,
 			r.name
 		FROM
-		    districts d
-		LEFT JOIN regions r  ON d.region_id = r.id
+		    district d
+		LEFT JOIN region r  ON d.region_id = r.id
 		%s %s %s %s
 	`, whereQuery, orderQuery, limitQuery, offsetQuery)
 
@@ -140,8 +140,8 @@ func (r Repository) GetList(ctx context.Context, filter Filter) ([]GetListRespon
 		SELECT
 			count(d.id)
 		FROM
-		    districts d
-		LEFT JOIN regions r ON d.region_id = d.id
+		    district d
+		LEFT JOIN region r ON d.region_id = d.id
 		%s
 	`, whereQuery)
 
@@ -176,9 +176,10 @@ func (r Repository) GetDetailById(ctx context.Context, id int) (GetDetailByIdRes
 			rg.name,
 			rg.republic_id,
 			rp.name
+
 		FROM
-				regions rg
-		LEFT JOIN republics rp ON rg.republic_id = rp.id
+				region rg
+		LEFT JOIN republic rp ON rg.republic_id = rp.id
 		WHERE rg.deleted_at IS NULL AND rg.id = %d
 	`, id)
 
@@ -247,7 +248,7 @@ func (r Repository) UpdateAll(ctx context.Context, request UpdateRequest) error 
 		return err
 	}
 
-	q := r.NewUpdate().Table("districts").Where("deleted_at IS NULL AND id = ?", request.ID)
+	q := r.NewUpdate().Table("district").Where("deleted_at IS NULL AND id = ?", request.ID)
 
 	q.Set("name = ?", request.Name)
 	q.Set("region_id = ?", request.RegionID)
@@ -270,7 +271,7 @@ func (r Repository) UpdateColumns(ctx context.Context, request UpdateRequest) er
 	if err != nil {
 		return err
 	}
-	q := r.NewUpdate().Table("districts").Where("deleted_at IS NULL AND id=?", request.ID)
+	q := r.NewUpdate().Table("district").Where("deleted_at IS NULL AND id=?", request.ID)
 	if request.Name != nil {
 		q.Set("name = ?", request.Name)
 	}
@@ -385,5 +386,5 @@ func (r Repository) GetDistrictsListByRegionID(ctx context.Context, regionID int
 }
 
 func (r Repository) Delete(ctx context.Context, id int) error {
-	return r.DeleteRow(ctx, "regions", id)
+	return r.DeleteRow(ctx, "region", id)
 }

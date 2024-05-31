@@ -5,7 +5,7 @@ import (
 )
 
 type Position struct {
-	bun.BaseModel `bun:"table:positions"`
+	bun.BaseModel `bun:"table:position"`
 
 	BasicEntity
 	Name map[string]string `json:"name"     bun:"name"`

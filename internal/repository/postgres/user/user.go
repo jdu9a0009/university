@@ -94,10 +94,9 @@ func (r Repository) GetList(ctx context.Context, filter Filter) ([]GetListRespon
 			avatar,
 			full_name,
 			username,
-			phone,
 			role,
-			birth_date,
-			birth_district
+			to_char(birth_date, 'DD.MM.YYYY'),
+			birth_district_id
 		FROM users
 		%s %s %s %s
 	`, whereQuery, orderQuery, limitQuery, offsetQuery)
@@ -119,7 +118,6 @@ func (r Repository) GetList(ctx context.Context, filter Filter) ([]GetListRespon
 			&detail.Avatar,
 			&detail.FullName,
 			&detail.Username,
-			&detail.Phone,
 			&detail.Role,
 			&detail.BirthDate,
 			&detail.BirthDistrict); err != nil {
@@ -167,17 +165,18 @@ func (r Repository) GetDetailById(ctx context.Context, id int) (GetDetailByIdRes
 
 	query := fmt.Sprintf(`
 		SELECT
-			id,
-			avatar,
-			full_name,
-			username,
-			phone,
-			role,
-			birth_date,
-			birth_district
-		FROM
-		    users
-		WHERE deleted_at IS NULL AND id = %d
+			u.id,
+			u.avatar,
+			u.full_name,
+			u.username,
+			u.role,
+			to_char(u.birth_date, 'DD.MM.YYYY'),
+			u.birth_district_id,
+			d.name->>'uz' AS birth_district_name
+			FROM
+		    users as u
+		LEFT JOIN district as d ON u.birth_district_id=d.id 	
+		WHERE u.deleted_at IS NULL AND u.id = %d
 	`, id)
 
 	var detail GetDetailByIdResponse
@@ -187,17 +186,17 @@ func (r Repository) GetDetailById(ctx context.Context, id int) (GetDetailByIdRes
 		&detail.Avatar,
 		&detail.FullName,
 		&detail.Username,
-		&detail.Phone,
 		&detail.Role,
 		&detail.BirthDate,
 		&detail.BirthDistrict,
+		&detail.BirthDistrictName,
 	)
 
 	if err == sql.ErrNoRows {
 		return GetDetailByIdResponse{}, web.NewRequestError(postgres.ErrNotFound, http.StatusNotFound)
 	}
 	if err != nil {
-		return GetDetailByIdResponse{}, web.NewRequestError(errors.Wrap(err, "selecting user detail"), http.StatusBadRequest)
+		return GetDetailByIdResponse{}, web.NewRequestError(errors.Wrap(err, "selecting user detail"), http.StatusInternalServerError)
 	}
 
 	if detail.Avatar != nil {
@@ -214,9 +213,10 @@ func (r Repository) Create(ctx context.Context, request CreateRequest) (CreateRe
 		return CreateResponse{}, err
 	}
 
-	if err := r.ValidateStruct(&request, "Username", "Password", "Role"); err != nil {
+	if err := r.ValidateStruct(&request, "Username", "Password", "Role", "FullName"); err != nil {
 		return CreateResponse{}, err
 	}
+
 	rand.Seed(time.Now().UnixNano())
 
 	UsernameStatus := true
@@ -242,15 +242,20 @@ func (r Repository) Create(ctx context.Context, request CreateRequest) (CreateRe
 	if (role != "STUDENT") && (role != "EMPLOYEE") {
 		return CreateResponse{}, web.NewRequestError(errors.New("incorrect role. role should be STUDENT or EMPLOYEE"), http.StatusBadRequest)
 	}
-
+	var birthDate time.Time
+	if request.BirthDate != nil {
+		birthDate, err = time.Parse("02.01.2006", *request.BirthDate)
+		if err != nil {
+			return CreateResponse{}, web.NewRequestError(errors.New("invalid birthday format"), http.StatusBadRequest)
+		}
+	}
 	response.Role = &role
 	response.FullName = request.FullName
 	response.Username = request.Username
 	response.Avatar = request.AvatarLink
 	response.Password = &hashedPassword
-	response.Phone = request.Phone
 	response.BirthDistrict = request.BirthDistrict
-	response.BirthDate = request.BirthDate
+	response.BirthDate = &birthDate
 	response.CreatedAt = time.Now()
 	response.CreatedBy = claims.UserId
 
@@ -263,7 +268,7 @@ func (r Repository) Create(ctx context.Context, request CreateRequest) (CreateRe
 		link := r.ServerBaseUrl + hashing.GenerateHash(*response.Avatar)
 		response.Avatar = &link
 	}
-
+	response.Password = nil
 	return response, nil
 }
 
@@ -297,13 +302,20 @@ func (r Repository) UpdateAll(ctx context.Context, request UpdateRequest) error 
 		return web.NewRequestError(errors.New("incorrect role. role should be STUDENT or EMPLOYEE"), http.StatusBadRequest)
 	}
 
+	var birthDate time.Time
+	if request.BirthDate != nil {
+		birthDate, err = time.Parse("02.01.2006", *request.BirthDate)
+		if err != nil {
+			return web.NewRequestError(errors.New("invalid birthday format"), http.StatusBadRequest)
+		}
+	}
+
 	q.Set("role = ?", role)
 	q.Set("full_name = ?", request.FullName)
 	q.Set("username = ?", request.Username)
-	q.Set("phone = ?", request.Phone)
 	q.Set("avatar = ?", request.AvatarLink)
-	q.Set("birth_date=?", request.BirthDate)
-	q.Set("birth_district=?", request.BirthDistrict)
+	q.Set("birth_date = ?", birthDate)
+	q.Set("birth_district_id = ?", request.BirthDistrict)
 	q.Set("updated_at = ?", time.Now())
 	q.Set("updated_by = ?", claims.UserId)
 	q.Set("password = ?", hashedPassword)
@@ -341,9 +353,7 @@ func (r Repository) UpdateColumns(ctx context.Context, request UpdateRequest) er
 		}
 		q.Set("username = ?", request.Username)
 	}
-	if request.Phone != nil {
-		q.Set("phone = ?", request.Phone)
-	}
+
 	if request.AvatarLink != nil {
 		q.Set("avatar = ?", request.AvatarLink)
 	}
@@ -361,6 +371,14 @@ func (r Repository) UpdateColumns(ctx context.Context, request UpdateRequest) er
 			return web.NewRequestError(errors.New("incorrect role. role should be STUDENT or EMPLOYEE"), http.StatusBadRequest)
 		}
 		q.Set("role = ?", role)
+	}
+
+	if request.BirthDate != nil {
+		birthDate, err := time.Parse("02.01.2006", *request.BirthDate)
+		if err != nil {
+			return web.NewRequestError(errors.New("invalid birthday format"), http.StatusBadRequest)
+		}
+		q.Set("birth_date = ?", birthDate)
 	}
 
 	q.Set("updated_at = ?", time.Now())

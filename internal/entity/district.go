@@ -5,7 +5,7 @@ import (
 )
 
 type District struct {
-	bun.BaseModel `bun:"table:districts"`
+	bun.BaseModel `bun:"table:district"`
 
 	BasicEntity
 	Name     map[string]string `json:"name"     bun:"name"`

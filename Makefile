@@ -4,4 +4,5 @@ run:
 push:
 	git add .
 	git commit -m "some changes"
-	git push origin omadbek
+	git push origin main
+	
