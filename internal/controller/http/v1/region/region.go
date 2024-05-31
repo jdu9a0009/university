@@ -54,46 +54,6 @@ func (rc Controller) GetRegionList(c *web.Context) error {
 	}, http.StatusOK)
 }
 
-func (rc Controller) GetRegionByRepublicIDList(c *web.Context) error {
-	id := c.GetParam(reflect.Int, "republic-id").(int)
-
-	if err := c.ValidParam(); err != nil {
-		return c.RespondError(err)
-	}
-
-	var filter region.Filter
-
-	if limit, ok := c.GetQueryFunc(reflect.Int, "limit").(*int); ok {
-		filter.Limit = limit
-	}
-	if offset, ok := c.GetQueryFunc(reflect.Int, "offset").(*int); ok {
-		filter.Offset = offset
-	}
-	if page, ok := c.GetQueryFunc(reflect.Int, "page").(*int); ok {
-		filter.Page = page
-	}
-	if search, ok := c.GetQueryFunc(reflect.String, "search").(*string); ok {
-		filter.Search = search
-	}
-
-	if err := c.ValidQuery(); err != nil {
-		return c.RespondError(err)
-	}
-
-	list, count, err := rc.region.GetRegionByRepublicIDList(c.Ctx, id, filter)
-	if err != nil {
-		return c.RespondError(err)
-	}
-
-	return c.Respond(map[string]interface{}{
-		"data": map[string]interface{}{
-			"results": list,
-			"count":   count,
-		},
-		"status": true,
-	}, http.StatusOK)
-}
-
 func (rc Controller) GetRegionDetailById(c *web.Context) error {
 	id := c.GetParam(reflect.Int, "id").(int)
 

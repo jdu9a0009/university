@@ -12,5 +12,4 @@ type Region interface {
 	UpdateAll(ctx context.Context, request region.UpdateRequest) error
 	UpdateColumns(ctx context.Context, request region.UpdateRequest) error
 	Delete(ctx context.Context, id int) error
-	GetRegionByRepublicIDList(ctx context.Context, republicID int, filter region.Filter) ([]region.GetListByRepublicIDResponse, int, error)
 }

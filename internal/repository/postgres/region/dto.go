@@ -23,11 +23,6 @@ type GetListResponse struct {
 	RepublicLanguages []string `json:"republic_languages"`
 }
 
-type GetListByRepublicIDResponse struct {
-	ID   int     `json:"id"`
-	Name *string `json:"name"`
-}
-
 type GetDetailByIdResponse struct {
 	ID         int               `json:"id"`
 	Name       map[string]string `json:"name"`

@@ -114,7 +114,6 @@ func (r Router) Init() error {
 	r.Put("/api/v1/region/:id", regionController.UpdateRegionAll, middleware.Authenticate(r.auth))
 	r.Patch("/api/v1/region/:id", regionController.UpdateRegionColumns, middleware.Authenticate(r.auth))
 	r.Delete("/api/v1/region/:id", regionController.DeleteRegion, middleware.Authenticate(r.auth))
-	r.Get("/api/v1/region/list/by/republic/:republic_id", regionController.GetRegionByRepublicIDList, middleware.Authenticate(r.auth))
 
 	// #district
 	r.Get("/api/v1/district/list", districtController.GetList, middleware.Authenticate(r.auth))
@@ -123,7 +122,6 @@ func (r Router) Init() error {
 	r.Put("/api/v1/district/:id", districtController.UpdateAll, middleware.Authenticate(r.auth))
 	r.Patch("/api/v1/district/:id", districtController.UpdateColumns, middleware.Authenticate(r.auth))
 	r.Delete("/api/v1/district/:id", districtController.Delete, middleware.Authenticate(r.auth))
-	r.Get("/api/v1/district/list/by/region/:region_id", districtController.GetListByRegionID, middleware.Authenticate(r.auth))
 
 	return r.Run(r.port)
 }

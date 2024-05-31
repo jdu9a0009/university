@@ -54,46 +54,6 @@ func (d Controller) GetList(c *web.Context) error {
 	}, http.StatusOK)
 }
 
-func (d Controller) GetListByRegionID(c *web.Context) error {
-	id := c.GetParam(reflect.Int, "region-id").(int)
-
-	if err := c.ValidParam(); err != nil {
-		return c.RespondError(err)
-	}
-
-	var filter district.Filter
-
-	if limit, ok := c.GetQueryFunc(reflect.Int, "limit").(*int); ok {
-		filter.Limit = limit
-	}
-	if offset, ok := c.GetQueryFunc(reflect.Int, "offset").(*int); ok {
-		filter.Offset = offset
-	}
-	if page, ok := c.GetQueryFunc(reflect.Int, "page").(*int); ok {
-		filter.Page = page
-	}
-	if search, ok := c.GetQueryFunc(reflect.String, "search").(*string); ok {
-		filter.Search = search
-	}
-
-	if err := c.ValidQuery(); err != nil {
-		return c.RespondError(err)
-	}
-
-	list, count, err := d.district.GetDistrictsListByRegionID(c.Ctx, id, filter)
-	if err != nil {
-		return c.RespondError(err)
-	}
-
-	return c.Respond(map[string]interface{}{
-		"data": map[string]interface{}{
-			"results": list,
-			"count":   count,
-		},
-		"status": true,
-	}, http.StatusOK)
-}
-
 func (d Controller) GetDetailById(c *web.Context) error {
 	id := c.GetParam(reflect.Int, "id").(int)
 

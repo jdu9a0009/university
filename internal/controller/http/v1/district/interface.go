@@ -12,5 +12,4 @@ type District interface {
 	UpdateAll(ctx context.Context, request district.UpdateRequest) error
 	UpdateColumns(ctx context.Context, request district.UpdateRequest) error
 	Delete(ctx context.Context, id int) error
-	GetDistrictsListByRegionID(ctx context.Context, regionID int, filter district.Filter) ([]district.GetListByRegionIDResponse, int, error)
 }
