@@ -40,6 +40,11 @@ func (r Repository) GetList(ctx context.Context, filter Filter) ([]GetListRespon
 	lang := r.GetLang(ctx)
 
 	orderQuery := "ORDER BY created_at desc"
+	whereQuery := ` WHERE deleted_at IS NULL`
+
+	if filter.Search != nil {
+		whereQuery += fmt.Sprintf(` AND (name->>'%s' ilike '%s')`, lang, "%"+*filter.Search+"%")
+	}
 
 	var limitQuery, offsetQuery string
 
@@ -62,9 +67,9 @@ func (r Repository) GetList(ctx context.Context, filter Filter) ([]GetListRespon
 		name->>'%s'
 	FROM
 		department
-		WHERE deleted_at IS NULL
-	%s %s %s
-`, lang, orderQuery, limitQuery, offsetQuery)
+
+	%s %s %s %s
+`, lang, whereQuery, limitQuery, offsetQuery, orderQuery)
 
 	rows, err := r.QueryContext(ctx, query)
 	if err == sql.ErrNoRows {

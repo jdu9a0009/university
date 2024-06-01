@@ -41,8 +41,8 @@ func (r Repository) GetList(ctx context.Context, filter Filter) ([]GetListRespon
 
 	whereQuery := fmt.Sprintf(`
 			WHERE 
-				rg.deleted_at IS NULL
-			`)
+				rg.deleted_at IS NULL AND rg.name->>'%s' IS NOT NULL 
+			`, lang)
 
 	if filter.Search != nil {
 		whereQuery += fmt.Sprintf(` AND 

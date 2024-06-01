@@ -74,6 +74,7 @@ func (r Router) Init() error {
 
 	// #auth
 	r.Post("/api/v1/sign-in", authController.SignIn)
+	r.Post("/api/v1/refresh", authController.Refresh)
 
 	// #user
 	r.Get("/api/v1/user/list", userController.GetList, middleware.Authenticate(r.auth, auth.RoleAdmin))

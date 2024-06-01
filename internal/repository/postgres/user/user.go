@@ -286,7 +286,7 @@ func (r Repository) UpdateAll(ctx context.Context, request UpdateRequest) error 
 		return web.NewRequestError(errors.Wrap(err, "Username check"), http.StatusInternalServerError)
 	}
 	if UsernameStatus {
-		return web.NewRequestError(errors.Wrap(errors.New(""), "Usernam is used"), http.StatusInternalServerError)
+		return web.NewRequestError(errors.Wrap(errors.New(""), "Username is used"), http.StatusInternalServerError)
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(*request.Password), bcrypt.DefaultCost)

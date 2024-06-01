@@ -4,6 +4,7 @@ import (
 	"mime/multipart"
 	"time"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/uptrace/bun"
 )
 
@@ -19,10 +20,21 @@ type SignInRequest struct {
 	Username string `json:"username" form:"username"`
 	Password string `json:"password" form:"password"`
 }
+type RefreshRequest struct {
+	AccessToken  string `json:"access_token" form:"access_token"`
+	RefreshToken string `json:"refresh_token" form:"refresh_token"`
+}
 
 type AuthClaims struct {
-	ID   int
-	Role string
+	ID   int    `json:"user_id"`
+	Role string `json:"role"`
+	Type string `json:"type"`
+	jwt.StandardClaims
+}
+
+// Valid implements jwt.Claims.
+func (*AuthClaims) Valid() error {
+	panic("unimplemented")
 }
 
 type GetListResponse struct {

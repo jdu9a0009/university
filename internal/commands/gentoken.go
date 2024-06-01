@@ -3,39 +3,31 @@ package commands
 import (
 	"crypto/rsa"
 	"fmt"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/pkg/errors"
 	"os"
 	"project/internal/auth"
 	user_service "project/internal/repository/postgres/user"
 	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/pkg/errors"
 )
 
 // GenToken generates a JWT for the specified area.
-func GenToken(userClaims user_service.AuthClaims, privateKeyFile string) (string, error) {
+func GenToken(userClaims user_service.AuthClaims, privateKeyFile string) (string, string, error) {
 	if userClaims.ID == 0 || privateKeyFile == "" {
 		fmt.Println("help: gentoken <id> <private_key_file> <algorithm>")
 		fmt.Println("algorithm: RS256, HS256")
-		return "", ErrHelp
-	}
-
-	// The call to retrieve a area requires an Admin role by the caller.
-	claims := auth.Claims{
-		StandardClaims: jwt.StandardClaims{
-			Subject: string(userClaims.ID),
-		},
-		UserId: userClaims.ID,
-		Role:   userClaims.Role,
+		return "", "", ErrHelp
 	}
 
 	privatePEM, err := os.ReadFile(privateKeyFile)
 	if err != nil {
-		return "", errors.Wrap(err, "reading PEM private key file")
+		return "", "", errors.Wrap(err, "reading PEM private key file")
 	}
 
 	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privatePEM)
 	if err != nil {
-		return "", errors.Wrap(err, "parsing PEM into private key")
+		return "", "", errors.Wrap(err, "parsing PEM into private key")
 	}
 
 	// In a production system, a key id (KID) is used to retrieve the correct
@@ -54,12 +46,12 @@ func GenToken(userClaims user_service.AuthClaims, privateKeyFile string) (string
 
 	// An authenticator maintains the state required to handle JWT processing.
 	// It requires the private key for generating tokens. The KID for access
-	// to the corresponding public key, the algorithms to use (RS256), and the
+	// to the corresponding public key, the algorithms to use (RS256), and theclaims
 	// key lookup function to perform the actual retrieve of the KID to public
 	// key lookup.
 	a, err := auth.New("RS256", lookup, auth.Keys{keyID: privateKey})
 	if err != nil {
-		return "", errors.Wrap(err, "constructing auth")
+		return "", "", errors.Wrap(err, "constructing auth")
 	}
 
 	// Generating a token requires defining a set of claims. In this applications
@@ -73,26 +65,41 @@ func GenToken(userClaims user_service.AuthClaims, privateKeyFile string) (string
 	// nbf (not before time): Time before which the JWT must not be accepted for processing
 	// iat (issued at time): Time at which the JWT was issued; can be used to determine age of the JWT
 	// jti (JWT ID): Unique identifier; can be used to prevent the JWT from being replayed (allows a token to be used only once)
-	claims = auth.Claims{
+	access_claim := auth.Claims{
 		StandardClaims: jwt.StandardClaims{
-			Issuer:    "xs-website",
+			Issuer:    "university-backend",
 			Subject:   string(userClaims.ID),
-			ExpiresAt: time.Now().Add(8760 * time.Hour).Unix(),
+			ExpiresAt: time.Now().Add(8 * time.Hour).Unix(),
 			IssuedAt:  time.Now().Unix(),
 		},
 		UserId: userClaims.ID,
 		Role:   userClaims.Role,
+		Type:   "access",
+	}
+	refresh_claim := auth.Claims{
+		StandardClaims: jwt.StandardClaims{
+			Issuer:    "university-backend",
+			Subject:   string(userClaims.ID),
+			ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
+			IssuedAt:  time.Now().Unix(),
+		},
+		UserId: userClaims.ID,
+		Role:   userClaims.Role,
+		Type:   "refresh",
 	}
 
 	// This will generate a JWT with the claims embedded in them. The database
 	// with need to be configured with the information found in the public key
 	// file to validate these claims. Dgraph does not support key rotate at
 	// this time.
-	token, err := a.GenerateToken(keyID, claims)
+	access_token, err := a.GenerateToken(keyID, access_claim)
 	if err != nil {
-		return "", errors.Wrap(err, "generating token")
+		return "", "", errors.Wrap(err, "generating access_token")
+	}
+	refresh_token, err := a.GenerateToken(keyID, refresh_claim)
+	if err != nil {
+		return "", "", errors.Wrap(err, "generating access_token")
 	}
 
-	fmt.Printf("-----BEGIN TOKEN-----\n%s\n-----END TOKEN-----\n", token)
-	return token, nil
+	return access_token, refresh_token, nil
 }

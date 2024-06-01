@@ -34,7 +34,6 @@ func (p Controller) GetList(c *web.Context) error {
 		return c.RespondError(err)
 	}
 
-
 	list, count, err := p.position.GetList(c.Ctx, filter)
 	if err != nil {
 		return c.RespondError(err)
@@ -84,7 +83,6 @@ func (p Controller) Create(c *web.Context) error {
 		"status": true,
 	}, http.StatusOK)
 }
-
 
 func (p Controller) UpdateAll(c *web.Context) error {
 	id := c.GetParam(reflect.Int, "id").(int)

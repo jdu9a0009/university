@@ -2,10 +2,11 @@ package auth
 
 import (
 	"crypto/rsa"
-	"github.com/dgrijalva/jwt-go"
-	"github.com/pkg/errors"
 	"strings"
 	"sync"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/pkg/errors"
 )
 
 // These are the expected values for Claims.Roles.
@@ -25,6 +26,7 @@ type Claims struct {
 	jwt.StandardClaims
 	UserId int    `json:"user_id"`
 	Role   string `json:"roles"`
+	Type   string `json:"type"`
 }
 
 type ClaimsParse struct {
@@ -35,9 +37,6 @@ type ClaimsParse struct {
 
 // Authorized returns true if the claims has at least one of the provided roles.
 func (c Claims) Authorized(role ...string) bool {
-	//if strings.Compare(role, c.Role) == 0 {
-	//	return true
-	//}
 
 	for _, r := range role {
 		if strings.Compare(r, c.Role) == 0 {

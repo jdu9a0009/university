@@ -41,6 +41,12 @@ func (r Repository) GetList(ctx context.Context, filter Filter) ([]GetListRespon
 
 	orderQuery := "Order by created_at desc"
 
+	whereQuery := ` WHERE deleted_at is null `
+
+	if filter.Search != nil {
+		whereQuery += fmt.Sprintf(` AND (name->>'%s' ilike '%s')`, lang, "%"+*filter.Search+"%")
+	}
+
 	var limitQuery, offsetQuery string
 
 	if filter.Page != nil && filter.Limit != nil {
@@ -62,9 +68,8 @@ func (r Repository) GetList(ctx context.Context, filter Filter) ([]GetListRespon
 		name->>'%s'
 	FROM
 		position
-		WHERE deleted_at IS NULL
-	%s %s %s
-`, lang, orderQuery, limitQuery, offsetQuery)
+	%s %s %s %s
+`, lang, whereQuery, orderQuery, limitQuery, offsetQuery)
 
 	rows, err := r.QueryContext(ctx, query)
 	if err == sql.ErrNoRows {
