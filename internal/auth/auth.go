@@ -11,7 +11,7 @@ import (
 
 // These are the expected values for Claims.Roles.
 const (
-	RoleAdmin    = "ADMIN"
+	RoleAdmin    = "STUDENT"
 	RoleEmployee = "EMPLOYEE"
 )
 
@@ -33,6 +33,7 @@ type ClaimsParse struct {
 	jwt.StandardClaims
 	UserId string `json:"user_id"`
 	Role   string `json:"roles"`
+	Type   *string `json:"type"`
 }
 
 // Authorized returns true if the claims has at least one of the provided roles.

@@ -1,15 +1,11 @@
 package auth
 
 import (
-	"fmt"
-	"io/ioutil"
 	"net/http"
 	"project/foundation/web"
 	"project/internal/commands"
 	"project/internal/repository/postgres/user"
-	"time"
 
-	"github.com/golang-jwt/jwt"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -28,12 +24,12 @@ func NewController(user User) *Controller {
 func (uc Controller) SignIn(c *web.Context) error {
 	var data user.SignInRequest
 
-	err := c.BindFunc(&data, "Login", "Password")
+	err := c.BindFunc(&data, "Username", "Password")
 	if err != nil {
 		return c.RespondError(err)
 	}
 
-	detail, err := uc.user.GetByLogin(c.Ctx, data.Username)
+	detail, err := uc.user.GetByUsername(c.Ctx, data.Username)
 	if err != nil {
 		return c.RespondError(err)
 	}
@@ -78,82 +74,28 @@ func (uc Controller) Refresh(c *web.Context) error {
 	}
 
 	// Parse the incoming tokens
-	accessClaims, err := parseToken(data.AccessToken, "./public.pem")
+	_, refreshTokenClaims, err := commands.VerifyTokens(data.AccessToken, data.RefreshToken, "./private.pem")
 	if err != nil {
-		return c.RespondError(err)
+		return c.RespondError(web.NewRequestError(err, http.StatusUnauthorized))
 	}
-
-	refreshClaims, err := parseToken(data.RefreshToken, "./public.pem")
-	if err != nil {
-		return c.RespondError(err)
-	}
-
-	// Check expiration times
-	currentTime := time.Now().Unix()
-	isAccessTokenExpired := accessClaims.ExpiresAt <= currentTime
-	isRefreshTokenExpired := refreshClaims.ExpiresAt <= currentTime
-
-	if isRefreshTokenExpired {
-		return c.RespondError(fmt.Errorf("refresh token expired"))
-	}
-
-	if isAccessTokenExpired {
-		return c.Respond(map[string]interface{}{
-			"status": true,
-			"data": map[string]string{
-				"access_token":  data.AccessToken,
-				"refresh_token": data.RefreshToken,
-			},
-			"error": nil,
-		}, http.StatusOK)
-	}
-
-	// Compare user IDs
-	if accessClaims.ID != refreshClaims.ID {
-		return c.RespondError(fmt.Errorf("user ID mismatch between access and refresh tokens"))
-	}
-
 	// Generate new tokens
-	newAccessToken, newRefreshToken, err := commands.GenToken(user.AuthClaims{
-		ID:   accessClaims.ID,
-		Role: accessClaims.Role,
-	}, "./private.pem")
-	if err != nil {
-		return c.RespondError(err)
+	userClaims := user.AuthClaims{
+		ID:   refreshTokenClaims.UserId,
+		Role: refreshTokenClaims.Role,
 	}
 
-	// Respond with the new tokens
+	accessToken, refreshToken, err := commands.GenToken(userClaims, "./private.pem")
+	if err != nil {
+		return c.RespondError(web.NewRequestError(errors.Wrap(err, "generating new tokens"), http.StatusInternalServerError))
+	}
+
 	return c.Respond(map[string]interface{}{
 		"status": true,
 		"data": map[string]string{
-			"access_token":  newAccessToken,
-			"refresh_token": newRefreshToken,
+			"access_token":  accessToken,
+			"refresh_token": refreshToken,
 		},
 		"error": nil,
 	}, http.StatusOK)
-}
-func parseToken(tokenString, publicKeyPath string) (*user.AuthClaims, error) {
-	publicKey, err := ioutil.ReadFile(publicKeyPath)
-	if err != nil {
-		return nil, err
-	}
 
-	verifyKey, err := jwt.ParseRSAPublicKeyFromPEM(publicKey)
-	if err != nil {
-		return nil, err
-	}
-
-	token, err := jwt.ParseWithClaims(tokenString, &user.AuthClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return verifyKey, nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	if claims, ok := token.Claims.(*user.AuthClaims); ok && token.Valid {
-		return claims, nil
-	} else {
-		return nil, fmt.Errorf("invalid token")
-	}
 }

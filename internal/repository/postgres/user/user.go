@@ -27,7 +27,7 @@ func NewRepository(database *postgresql.Database) *Repository {
 	return &Repository{Database: database}
 }
 
-func (r Repository) GetByLogin(ctx context.Context, username string) (entity.User, error) {
+func (r Repository) GetByUsername(ctx context.Context, username string) (entity.User, error) {
 	var detail entity.User
 
 	err := r.NewSelect().Model(&detail).Where("username = ? AND deleted_at IS NULL", username).Scan(ctx)

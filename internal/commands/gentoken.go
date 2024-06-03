@@ -46,7 +46,7 @@ func GenToken(userClaims user_service.AuthClaims, privateKeyFile string) (string
 
 	// An authenticator maintains the state required to handle JWT processing.
 	// It requires the private key for generating tokens. The KID for access
-	// to the corresponding public key, the algorithms to use (RS256), and theclaims
+	// to the corresponding public key, the algorithms to use (RS256), and the
 	// key lookup function to perform the actual retrieve of the KID to public
 	// key lookup.
 	a, err := auth.New("RS256", lookup, auth.Keys{keyID: privateKey})
@@ -65,10 +65,10 @@ func GenToken(userClaims user_service.AuthClaims, privateKeyFile string) (string
 	// nbf (not before time): Time before which the JWT must not be accepted for processing
 	// iat (issued at time): Time at which the JWT was issued; can be used to determine age of the JWT
 	// jti (JWT ID): Unique identifier; can be used to prevent the JWT from being replayed (allows a token to be used only once)
-	access_claim := auth.Claims{
+	accessClaims := auth.Claims{
 		StandardClaims: jwt.StandardClaims{
-			Issuer:    "university-backend",
-			Subject:   string(userClaims.ID),
+			Issuer:    "backend-template",
+			Subject:   fmt.Sprint(userClaims.ID),
 			ExpiresAt: time.Now().Add(8 * time.Hour).Unix(),
 			IssuedAt:  time.Now().Unix(),
 		},
@@ -76,10 +76,11 @@ func GenToken(userClaims user_service.AuthClaims, privateKeyFile string) (string
 		Role:   userClaims.Role,
 		Type:   "access",
 	}
-	refresh_claim := auth.Claims{
+
+	refreshClaims := auth.Claims{
 		StandardClaims: jwt.StandardClaims{
-			Issuer:    "university-backend",
-			Subject:   string(userClaims.ID),
+			Issuer:    "backend-template",
+			Subject:   fmt.Sprint(userClaims.ID),
 			ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
 			IssuedAt:  time.Now().Unix(),
 		},
@@ -92,14 +93,66 @@ func GenToken(userClaims user_service.AuthClaims, privateKeyFile string) (string
 	// with need to be configured with the information found in the public key
 	// file to validate these claims. Dgraph does not support key rotate at
 	// this time.
-	access_token, err := a.GenerateToken(keyID, access_claim)
-	if err != nil {
-		return "", "", errors.Wrap(err, "generating access_token")
-	}
-	refresh_token, err := a.GenerateToken(keyID, refresh_claim)
+	accessToken, err := a.GenerateToken(keyID, accessClaims)
 	if err != nil {
 		return "", "", errors.Wrap(err, "generating access_token")
 	}
 
-	return access_token, refresh_token, nil
+	refreshToken, err := a.GenerateToken(keyID, refreshClaims)
+	if err != nil {
+		return "", "", errors.Wrap(err, "generating token")
+	}
+
+	fmt.Printf("-----BEGIN ACCESS TOKEN-----\n%s\n-----END ACCESS TOKEN-----\n\n-----BEGIN REFRESH TOKEN-----\n%s\n-----END REFRESH TOKEN-----\n", accessToken, refreshToken)
+	return accessToken, refreshToken, nil
+}
+
+func VerifyTokens(expiredAccessToken, refreshToken string, privateKeyFile string) (*auth.Claims, *auth.Claims, error) {
+	privatePEM, err := os.ReadFile(privateKeyFile)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "reading PEM private key file")
+	}
+
+	privateKey, err := jwt.ParseRSAPrivateKeyFromPEM(privatePEM)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "parsing PEM into private key")
+	}
+
+	keyID := "54bb2165-71e1-41a6-af3e-7da4a0e1e2c1"
+	lookup := func(kid string) (*rsa.PublicKey, error) {
+		if kid == keyID {
+			return &privateKey.PublicKey, nil
+		}
+		return nil, fmt.Errorf("no public key found for the specified kid: %s", kid)
+	}
+
+	_, err = auth.New("RS256", lookup, auth.Keys{keyID: privateKey})
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "constructing auth")
+	}
+
+	// Verify the expired access token (ignoring expiration)
+	expiredAccessTokenClaims := &auth.Claims{}
+	_, err = jwt.ParseWithClaims(expiredAccessToken, expiredAccessTokenClaims, func(token *jwt.Token) (interface{}, error) {
+		return &privateKey.PublicKey, nil
+	})
+	if err != nil && err.(*jwt.ValidationError).Errors != jwt.ValidationErrorExpired {
+		return nil, nil, errors.New("invalid access token")
+	}
+
+	// Verify the refresh token
+	refreshTokenClaims := &auth.Claims{}
+	_, err = jwt.ParseWithClaims(refreshToken, refreshTokenClaims, func(token *jwt.Token) (interface{}, error) {
+		return &privateKey.PublicKey, nil
+	})
+	if err != nil {
+		return nil, nil, errors.New("invalid refresh token")
+	}
+
+	// Check if the refresh token matches the user in the expired access token
+	if expiredAccessTokenClaims.UserId != refreshTokenClaims.UserId {
+		return nil, nil, errors.New("token user ID mismatch")
+	}
+
+	return expiredAccessTokenClaims, refreshTokenClaims, nil
 }
